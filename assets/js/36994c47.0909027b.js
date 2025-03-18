@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkupb_rustworkshop_github_io=self.webpackChunkupb_rustworkshop_github_io||[]).push([[858],{5516:u=>{u.exports=JSON.parse('{"name":"docusaurus-plugin-content-blog","id":"default"}')}}]);
