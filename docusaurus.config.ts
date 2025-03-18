@@ -104,26 +104,26 @@ const config: Config = {
           title: "Community",
           items: [
             {
-              label: "Stack Overflow",
-              href: "https://stackoverflow.com/questions/tagged/docusaurus",
+              label: "IP Workshop",
+              href: "https://www.ipworkshop.ro",
             },
             {
-              label: "Discord",
-              href: "https://discordapp.com/invite/docusaurus",
+              label: "Facebook",
+              href: "https://facebook.com/ipworkshop",
             },
             {
-              label: "X",
-              href: "https://x.com/docusaurus",
+              label: "Instagram",
+              href: "https://www.instagram.com/ipworkshop.ro/",
             },
           ],
         },
         {
           title: "More",
           items: [
-            {
-              label: "Blog",
-              to: "/blog",
-            },
+            // {
+            //   label: "Blog",
+            //   to: "/blog",
+            // },
             {
               label: "GitHub",
               href: "https://github.com/UPB-RustWorkshop/upb-rustworkshop.github.io",
