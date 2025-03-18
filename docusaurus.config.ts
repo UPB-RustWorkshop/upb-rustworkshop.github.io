@@ -40,7 +40,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            "https://github.com/UPB-RustWorkshop/upb-rustworkshop.github.io",
+            "https://github.com/UPB-RustWorkshop/upb-rustworkshop.github.io/edit/main",
         },
         blog: {
           showReadingTime: true,
@@ -51,7 +51,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            "https://github.com/UPB-RustWorkshop/upb-rustworkshop.github.io",
+            "https://github.com/UPB-RustWorkshop/upb-rustworkshop.github.io/edit/main",
           // Useful options to enforce blogging best practices
           onInlineTags: "warn",
           onInlineAuthors: "warn",
