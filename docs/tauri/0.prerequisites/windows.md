@@ -1,8 +1,9 @@
 ---
 sidebar_position: 1
+title: Windows
 ---
 
-# Windows
+# **Tauri Setup Guide for Windows**
 
 ---
 
@@ -53,92 +54,6 @@ sidebar_position: 1
   3. Run the installer and:
      - Select **"Desktop development with C++"** workload.
      - Click **"Install"**.
-
----
-
-## **Step 2: Create a Tauri Project**
-
-### 1. Open VS Code
-
-- If you don’t have VS Code, download it from [https://code.visualstudio.com/](https://code.visualstudio.com/).
-
-### 2. Open the Terminal in VS Code
-
-- Press **Ctrl + `** (backtick) to open the terminal.
-
-### 3. Run the Tauri Project Generator
-
-- In the terminal, run this command:
-
-  ```powershell
-  deno run -A npm:create-tauri-app@latest
-  ```
-
-- **Follow the prompts**:
-  1. **Project name**: Enter a name (e.g., `tauri-deno-app`).
-  2. **Package manager**: Choose **Deno**.
-  3. **UI template**: Choose **Vite**.
-  4. **UI variant**: Choose **TypeScript** (recommended).
-
----
-
-## **Step 3: Configure the Project**
-
-### 1. Open the Project in VS Code
-
-- Click **File → Open Folder** and select the folder created by the Tauri generator (e.g., `tauri-deno-app`).
-
-### 2. Install Tauri API for Deno
-
-- In the terminal, run:
-
-  ```powershell
-  deno add @tauri-apps/api
-  ```
-
----
-
-## **Step 4: Run the Development Server**
-
-### 1. Start the Frontend
-
-- In the terminal, run:
-
-  ```powershell
-  deno task dev
-  ```
-
-  This will start the Vite development server.
-
-### 2. Start the Tauri Backend
-
-- Open a **new terminal** in VS Code (Ctrl + Shift + `).
-- Run:
-
-  ```powershell
-  deno task tauri
-  ```
-
-  This will open a desktop window with your app running.
-
----
-
-## **Step 5: Build the App**
-
-### 1. Build the Production Version
-
-- In the terminal, run:
-
-  ```powershell
-  deno task build
-  ```
-
-### 2. Find the Installer
-
-- The installer will be located in:
-  ```
-  src-tauri/target/release/bundle/msi/tauri-deno-app_0.1.0_x64_en-US.msi
-  ```
 
 ---
 
