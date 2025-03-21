@@ -21,7 +21,7 @@ Please take a moment to look at the schedule for the Rust Workshop.
 
 | Time | Location | Activity |
 |------|----------|----------|
-|09:50 - 10:00 | PR001 | Welcome |
+|09:30 - 10:00 | PR001 | Registration |
 |10:00 - 11:30 | PR001 | What makes Rust so special? - Alexandru Radovici |
 |11:30 - 13:00 | Breakout Rooms | Workshop (for each track) |
 |13:00 - 14:00 | Lunch | Pizza from NXP |
