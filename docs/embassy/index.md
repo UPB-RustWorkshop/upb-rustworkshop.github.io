@@ -433,7 +433,7 @@ The ADC has two important parameters that define the quality of the signal repre
 | Resolution | Number of bits which we can use in order to store the value of the sample | The higher the resolution, the more values we can store, so the more accurate the representation |
 
 :::info
-For example, a resolution of 8 bits means that we can approximate the analog signal to a value from 0 to 255.
+For example, a resolution of 8 bits means that we can approximate the analog signal to a value from 0 to 255, where 0 means 0 volts and 255 represents the ADC reference voltage (maximum voltage the ADC can measure).
 :::
 
 ![ADCSampling](./assets/sampling_values.svg)
