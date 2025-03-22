@@ -104,6 +104,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Understanding the Starter Code
 
+### Starter assignment
+
+Check this [link](https://classroom.github.com/a/whQbhBHX) and accept the assignment to get the starter code for your project.
+
 ### Project Structure
 ```
 weather-cli/
