@@ -30,7 +30,7 @@ Please take a moment to look at the schedule for the Rust Workshop.
 ## Breakout Rooms
 
 | Track | Room |
-|-|-|-|
+|-|-|
 | Command Line Applications | PR001 |
 | Embassy | PR002 |
 | Axum Web Servers | PR003 |
