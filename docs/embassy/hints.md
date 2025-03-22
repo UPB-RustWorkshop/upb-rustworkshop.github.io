@@ -65,4 +65,21 @@ To make the light fade from red to blue, you can simply interpolate between the 
 
 ## The temperature is rising - Hint 02
 
+This is how you can bind the I2C interrupt:
 
+```rust
+embassy_rp::bind_interrupts!(struct Irqs {
+    // Do not forget to bind the I2C peripheral interrupt to its handler
+    I2CX_IRQ => embassy_rp::i2c::InterruptHandler<embassy_rp::peripherals::I2CX>;
+});
+```
+
+where `X` is the peripheral number, that should correspond with the two pins you chose to use.
+
+The bus declaration should look like this:
+
+```rust
+let bus = I2c::new_async(p.I2C1, p.PIN_7, p.PIN_6, Irqs, Default::default());
+```
+
+and to instantiate the BMP280 structure, use the `new()` function and pass the bus we just created. Do not forget to configure the oversampling rates and power mode, using the `set_control()` function. Then, simply read the temperature.
