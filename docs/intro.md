@@ -27,6 +27,16 @@ Please take a moment to look at the schedule for the Rust Workshop.
 |13:00 - 14:00 | Lunch | Pizza from NXP |
 |14:00 - 18:00 | Breakout Rooms | Workshop (for each track) |
 
+## Breakout Rooms
+
+| Track | Room |
+|-|-|-|
+| Command Line Applications | PR001 |
+| Embassy | PR002 |
+| Axum Web Servers | PR003 |
+| Slint Desktop Applications | PR106 |
+| Tauri Desktop Applications | PR107 |
+
 ### Sunday
 
 | Time | Location | Activity |
