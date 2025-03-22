@@ -478,7 +478,7 @@ $$
 In our case:
 
 * $ V_{out} $ will be the voltage at the ADC pin on the MCU
-* $ V_{in} $ will be the voltage at the from the GPIO pin the photoresistor is tied to
+* $ V_{in} $ will be the voltage at the GPIO pin the photoresistor is tied to
 * $ R_{1} $ is the variable resistance of the photoresistor
 * $ R_{2} $ is a resistance compatible with our photoresistor (in our case, 10k $\Omega$)
 
