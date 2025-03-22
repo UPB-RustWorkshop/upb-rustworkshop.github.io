@@ -38,13 +38,11 @@ Read the `CONTRIBUTE.md` file carefully. This document outlines the guidelines y
 
 ### Step 3: Claim Your Issue
 
-To avoid multiple people working on the same issue, add a link to the issue you are working on in front of your name in the below document. This helps maintain clarity and coordination.
+To avoid multiple hackathon participants working on the same issue, add a link to the issue you are working on in front of your name in the below document. This helps maintain clarity and coordination.
 
 **Checklist:** **[Checklist](https://docs.google.com/spreadsheets/d/17BxGBBtn4a0G2yWU_ngfr20-PePO-kfmuUku4ADwE7E/edit?usp=sharing)**
 
 ---
-
-This version is clearer, more concise, and better structured. Let me know if you need further adjustments!
 
 ## **Your First Pull Request: A 5-Step Blueprint** 🔧
 
@@ -58,8 +56,10 @@ cd PROJECT-NAME
 
 ### **Step 2: Create a Dedicated Branch**
 
+Chose a descriptive name for your branch, check CONTRIBUTE.md if there are a special formating for branch names.
+
 ```bash
-git checkout -b my-contribution  # Branch names like "fix-readme-typo" work too!
+git checkout -b <YOUR-BRANCH-NAME> # Branch names like "fix-readme-typo" work too!
 ```
 
 ### **Step 3: Make Meaningful Changes**
@@ -78,10 +78,30 @@ git commit -m "docs: Improve API documentation clarity"
 # Use conventional prefixes: feat, fix, docs, test, chore
 ```
 
+`feat` => for adding a new functionality.
+
+- e.g: adding a new component, endpoint or user interaction.
+
+`fix` => for fixing an error or bug.
+
+- e.g: resolving crashes, incorrect behavior, or edge cases.
+
+`docs` => for updates on documentation.
+
+- e.g: writing or editing README.md.
+
+`test` => for implementing tests.
+
+- e.g: writing new test cases.
+
+`chore` => routine tasks that don't affect functionality.
+
+- e.g: update dependecies
+
 ### **Step 5: Push & Create PR**
 
 ```bash
-git push --set-upstream origin my-contribution
+git push --set-upstream origin <YOUR-BRANCH-NAME>
 ```
 
 **Then:**
