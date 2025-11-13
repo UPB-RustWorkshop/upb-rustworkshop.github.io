@@ -36,7 +36,7 @@ const FeatureList: FeatureItem[] = [
     Svg: require("@site/static/img/embedded.svg").default,
     description: (
       <>
-        Use the Raspberry Pi Pico 2W, one of the most affordable and easy to use
+        Use the STM32 Nucleo-U545RE-Q, one of the most affordable and easy to use
         development boards to design and implement hardware devices.
       </>
     ),
