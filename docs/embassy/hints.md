@@ -68,9 +68,9 @@ To make the light fade from red to blue, you can simply interpolate between the 
 This is how you can bind the I2C interrupt:
 
 ```rust
-embassy_rp::bind_interrupts!(struct Irqs {
-    // Do not forget to bind the I2C peripheral interrupt to its handler
-    I2CX_IRQ => embassy_rp::i2c::InterruptHandler<embassy_rp::peripherals::I2CX>;
+embassy_stm32::bind_interrupts!(struct Irqs {
+    I2C1_EV => i2c::EventInterruptHandler<peripherals::I2C1>;
+    I2C1_ER => i2c::ErrorInterruptHandler<peripherals::I2C1>;
 });
 ```
 
