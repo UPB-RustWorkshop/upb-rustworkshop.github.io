@@ -36,7 +36,7 @@ Please take a moment to look at the schedule for the Rust Workshop.
 | Axum Web Servers | PR003 |
 | Tauri Desktop Applications | PR106 |
 | Rust Kernel Development | PR105 |
-| Edge AI in Rust | RP107 |
+| Edge AI in Rust | PR107 |
 
 ### Sunday
 
