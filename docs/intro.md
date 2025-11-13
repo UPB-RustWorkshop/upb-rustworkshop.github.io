@@ -21,11 +21,11 @@ Please take a moment to look at the schedule for the Rust Workshop.
 
 | Time | Location | Activity |
 |------|----------|----------|
-|09:30 - 10:00 | PR001 | Registration |
+|09:30 - 10:00 | Hol PRECIS | Registration |
 |10:00 - 11:30 | PR001 | What makes Rust so special? - Alexandru Radovici |
-|11:30 - 13:00 | Breakout Rooms | Workshop (for each track) |
-|13:00 - 14:00 | Lunch | Pizza from NXP |
-|14:00 - 18:00 | Breakout Rooms | Workshop (for each track) |
+|11:30 - 13:30 | Breakout Rooms | Workshop (for each track) |
+|13:30 - 14:30 | Lunch | Pizza from NXP |
+|14:30 - 18:00 | Breakout Rooms | Workshop (for each track) |
 
 #### Breakout Rooms
 
@@ -34,28 +34,17 @@ Please take a moment to look at the schedule for the Rust Workshop.
 | Command Line Applications | PR001 |
 | Embassy | PR002 |
 | Axum Web Servers | PR003 |
-| Slint Desktop Applications | PR106 |
-| Tauri Desktop Applications | PR107 |
+| Tauri Desktop Applications | PR106 |
+| Rust Kernel Development | PR105 |
+| Edge AI in Rust | RP107 |
 
 ### Sunday
 
 | Time | Location | Activity |
 |------|----------|----------|
-|10:00 - 13:00 | Breakout Rooms | Open Source Hackathon |
-|13:00 - 14:00 | Lunch | Pizza from NXP |
-|14:00 - 18:00 | Breakout Rooms | Open Source Hackathon |
-
-## Tracks
-
-Track assignments will be announced when registering.
-
-| Track | Room | Trainers |
-|-------|------|----------|
-| Embassy | | |
-| Web Servers | | |
-| Slint Desktop Applications | |  |
-| Tauri Desktop Applications | |  |
-| Command Line Applications | PR001 | |
+|10:00 - 13:00 | PR001 | Open Source Hackathon |
+|13:30 - 14:30 | Lunch | Pizza from NXP |
+|14:30 - 18:00 | PR001 | Open Source Hackathon |
 
 ## Thank you
 
