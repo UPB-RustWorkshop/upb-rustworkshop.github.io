@@ -9,6 +9,7 @@ title: Windows
 
 ## **Step 1: Install Required Software**
 
+### If you do not have a packate manager & JS/TS runtime (node, npm)
 ### 1. Install Deno (JavaScript/TypeScript Runtime)
 
 - **Website**: [https://deno.land/](https://deno.land/)
