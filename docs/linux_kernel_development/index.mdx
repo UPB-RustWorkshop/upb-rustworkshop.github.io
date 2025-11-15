@@ -175,7 +175,7 @@ provides a minimal bootloader that can load a `multiboot v1` compatible kernel t
 supplied using the `-kernel` argument. The Linux kernel is compatible. 
 
 ```bash
-$ qemu-system -kernel arch/x86_64/boot/bzImage -nographic -append "earlyprintk=serial,ttyS0 console=ttyS0 debug"
+$ qemu-system-x86_64 -kernel arch/x86_64/boot/bzImage -nographic -append "earlyprintk=serial,ttyS0 console=ttyS0 debug"
 ```
 
 Running QEMU should print an output similar to:
@@ -354,7 +354,7 @@ $ find . -print0 | cpio --null -ov --format=newc | gzip -9 > ../initramfs.cpio.g
 We have to add the `--initrd` argument to QEMU.
 
 ```bash
-$ qemu-system -kernel arch/x86_64/boot/bzImage -nographic -append "earlyprintk=serial,ttyS0 console=ttyS0 debug" --initrd initramfs.cpio.gz
+$ qemu-system-x86_64 -kernel arch/x86_64/boot/bzImage -nographic -append "earlyprintk=serial,ttyS0 console=ttyS0 debug" --initrd initramfs.cpio.gz
 ```
 
 **The kernel boots, but it seems to show use the same panic!**
