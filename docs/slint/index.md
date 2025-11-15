@@ -1,5 +1,5 @@
 ---
-sidebar_position: 3
+sidebar_position: 4
 ---
 # Slint Desktop Applications
 
@@ -56,7 +56,7 @@ This callback will be executed when the Add Item button is clicked. It simply ad
 Next, we have to define a callback to clear all to-do items from the list:
 
     let todo_model_clearing = todo_model.clone();
-    
+
 Create a callback that is tied to the `Clear All` button. When clicked, it clears the entire list of to-do items.
 
 #### Step 5: Run the UI
@@ -67,9 +67,9 @@ Finally, we run the application:
 }
 This will start the event loop and display the UI, waiting for user interactions.
 
-### Running the application 
+### Running the application
 
-Run the following command: 
+Run the following command:
 ```
 cargo run
 ```

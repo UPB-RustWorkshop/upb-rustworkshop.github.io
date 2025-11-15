@@ -1,0 +1,713 @@
+---
+sidebar_position: 7
+title: Linux Kernel Development
+---
+# Linux Kernel Development
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Prerequisits
+
+- Linux x86 64bit
+  - We recommend Ubuntu LTS or Fedora
+- GCC Compiler
+- LLVM Compiler
+- QEMU
+- Rust 1.90
+- Code Editor with [rust-analyzer](https://rust-analyzer.github.io/) support
+
+
+<Tabs>
+
+<TabItem value="ubuntu" label="Ubuntu">
+
+```shell
+# Update the package library
+$ sudo apt-get
+
+# Kernel Compilation
+$ sudo apt-get install -y build-essential git libncurses-dev clang flex bison lld libelf-dev
+
+# Install QEMU
+$ sudo apt-get install -y qemu-system
+```
+
+</TabItem>
+
+<TabItem value="fedora" label="Fedora">
+
+```shell
+# Update the package library
+$ dnf update
+
+# Kernel Compilation
+$ dnf install -y make clang ncurses-devel flex bison lld llvm elfutils-libelf-devel glibc-static
+
+# BusyBox Compilation
+$ dnf install -y glibc-static
+
+# Install QEMU
+$ dnf install -y qemu-system-x86_64
+```
+
+</TabItem>
+
+</Tabs>
+
+## Variables
+
+We will use these variables througout the workshop.
+
+| Variable | Description |
+|-|-|
+| `$KDIR` | The kernel's source directory |
+| `$MODULE` | The name of the kenrel module's object name (ex: `empty.ko`) |
+| `$INIT_RAM_FS` | Foldetr where we stotre the development file system |
+
+## Setup the Kernel
+
+Unzip the kernel archive (usually named `linux-6.18-rc5.tar.gz`) and enter in the
+folder. 
+
+:::info
+We will call the folder in which you have unarchived the kernel `$KDIR`. We suggest setting
+and environment variable with the path to this folder.
+
+```shell
+$ export KDIR=/home/user/linux-6.18-rc5
+```
+:::
+
+### Build the kernel with Rust Support
+
+Verify if Rust is available and can be used to compile kernel.
+
+```bash
+$ make LLVM=1 rustavailable
+# Rust is available!
+```
+
+Clean the kernel to make sure to delete any previous compilation artefacts.
+
+```bash
+$ make LLVM=1 mrproper
+```
+
+### Configure the Kernel
+
+The Linux kernel is very large, having thousends of components and drivers. 
+We want a minimal configartion that allows use to write Rust drivers.
+
+To start from a minimal configuration, we use the `allnoconfig` setup. This will enable
+only the minimal components needed to boot.
+
+```bash
+$ make LLVM=1 allnoconfig
+```
+
+We have to add on top of the minimal kernel some components that allows us to:
+- Compile the kernel for Intel x86 64 bits
+- Use Rust to write drivers
+- Use a RAM drive as the root of the file system
+- Use a serial port for the console
+- Use the kernel special virtual file systems `procfs`, `devfs`,  and `sysfs`
+
+```bash
+$ make LLVM=1 menuconfig
+```
+
+Make sure the following components are selected:
+
+```
+- 64bit Kernel (no Rust otherwise)
+- General setup 
+  - Initial RAM filesystem and RAM disk
+- General setup
+  - Rust Support
+- Enable loadable module support
+  - Module unloading
+- Executable file formats
+  - Kernel support for ELF binaries
+  - Kernel support for scripts starting with #! (*)
+- Kernel hacking
+  - Rust hacking
+    - Debug assertions
+    - Overflow checks
+    - Allow unoptimized build-time assertions
+- Device Drivers
+  - Generic driver options
+    - Maintain a devtmpfs filesystem to mount at /dev
+      - Automount devtmpfs at /dev, after kernel mounted the rootfs
+  - Character devices
+    - Enable tty
+    - Serial drivers
+      - 8250/16550 and compatible serial support
+      - Console on 8250/16550 and compatible serial port
+- File systems 
+  - Pseudo filesystems
+    - /proc file system support
+    - Sysctl support (/proc/sys)
+    - sysfs file system support
+    - Userspace-driven configuration filesystem
+```
+
+### Build the kernel
+
+Now let's build the kernel.
+
+:::tip
+As this wil take a longer time, we want to make sure we use all the avilable cores.
+
+Replace the `n` in `-jn` with the number of cores that your laptop has.
+:::
+
+```bash
+$ make LLVM=1 -jn # replace n with the number of cores your laptop has
+```
+
+The kernel is built in `arch/x86/boot/bzImage`
+
+### Run the kernel
+
+We will use QEMU to run a machine and boot our kernel. Instead of using a bootloader, QEMU
+provides a minimal bootloader that can load a `multiboot v1` compatible kernel that is 
+supplied using the `-kernel` argument. The Linux kernel is compatible. 
+
+```bash
+$ qemu-system -kernel arch/x86_64/boot/bzImage -nographic -append "earlyprintk=serial,ttyS0 console=ttyS0 debug"
+```
+
+Running QEMU should print an output similar to:
+
+```text
+Linux version 6.18.0-rc4 (alexandru@fedora) (clang version 21.1.3 (Fedora 21.1.3-1.fc43), LLD 21.1.3) #6 Thu Nov 13 11:21:16 EET 2025
+Command line: earlyprintk=serial,ttyS0 console=ttyS0 debug
+BIOS-provided physical RAM map:
+BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable
+BIOS-e820: [mem 0x000000000009fc00-0x000000000009ffff] reserved
+BIOS-e820: [mem 0x00000000000f0000-0x00000000000fffff] reserved
+BIOS-e820: [mem 0x0000000000100000-0x0000000007fdffff] usable
+BIOS-e820: [mem 0x0000000007fe0000-0x0000000007ffffff] reserved
+BIOS-e820: [mem 0x00000000fffc0000-0x00000000ffffffff] reserved
+BIOS-e820: [mem 0x000000fd00000000-0x000000ffffffffff] reserved
+printk: legacy bootconsole [earlyser0] enabled
+NX (Execute Disable) protection: active
+APIC: Static calls initialized
+SMBIOS 2.8 present.
+DMI: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.17.0-6.fc43 04/01/2014
+DMI: Memory slots populated: 1/1
+tsc: Fast TSC calibration using PIT
+tsc: Detected 3293.791 MHz processor
+e820: update [mem 0x00000000-0x00000fff] usable ==> reserved
+e820: remove [mem 0x000a0000-0x000fffff] usable
+last_pfn = 0x7fe0 max_arch_pfn = 0x400000000
+MTRR map: 4 entries (3 fixed + 1 variable; max 19), built from 8 variable MTRRs
+x86/PAT: Configuration [0-7]: WB  WC  UC- UC  WB  WP  UC- WT  
+found SMP MP-table at [mem 0x000f5460-0x000f546f]
+Intel MultiProcessor Specification v1.4
+MPTABLE: OEM ID: BOCHSCPU
+MPTABLE: Product ID: 0.1         
+MPTABLE: APIC at: 0xFEE00000
+Zone ranges:
+  DMA      [mem 0x0000000000001000-0x0000000000ffffff]
+  DMA32    [mem 0x0000000001000000-0x0000000007fdffff]
+  Normal   empty
+Movable zone start for each node
+Early memory node ranges
+  node   0: [mem 0x0000000000001000-0x000000000009efff]
+  node   0: [mem 0x0000000000100000-0x0000000007fdffff]
+Initmem setup node 0 [mem 0x0000000000001000-0x0000000007fdffff]
+On node 0, zone DMA: 1 pages in unavailable ranges
+On node 0, zone DMA: 97 pages in unavailable ranges
+On node 0, zone DMA32: 32 pages in unavailable ranges
+Intel MultiProcessor Specification v1.4
+MPTABLE: OEM ID: BOCHSCPU
+MPTABLE: Product ID: 0.1         
+MPTABLE: APIC at: 0xFEE00000
+Processor #0 (Bootup-CPU)
+IOAPIC[0]: apic_id 0, version 32, address 0xfec00000, GSI 0-23
+Processors: 1
+CPU topo: Max. logical packages:   1
+CPU topo: Max. logical dies:       1
+CPU topo: Max. dies per package:   1
+CPU topo: Max. threads per core:   1
+CPU topo: Num. cores per package:     1
+CPU topo: Num. threads per package:   1
+CPU topo: Allowing 1 present CPUs plus 0 hotplug CPUs
+[mem 0x08000000-0xfffbffff] available for PCI devices
+clocksource: refined-jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645519600211568 ns
+pcpu-alloc: s0 r0 d32768 u32768 alloc=1*32768
+pcpu-alloc: [0] 0 
+Kernel command line: earlyprintk=serial,ttyS0 console=ttyS0 debug
+printk: log buffer data + meta data: 131072 + 458752 = 589824 bytes
+Dentry cache hash table entries: 16384 (order: 5, 131072 bytes, linear)
+Inode-cache hash table entries: 8192 (order: 4, 65536 bytes, linear)
+Built 1 zonelists, mobility grouping on.  Total pages: 32638
+mem auto-init: stack:all(zero), heap alloc:off, heap free:off
+SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=1, Nodes=1
+NR_IRQS: 4352, nr_irqs: 48, preallocated irqs: 16
+Console: colour VGA+ 80x25
+printk: legacy console [ttyS0] enabled
+printk: legacy console [ttyS0] enabled
+printk: legacy bootconsole [earlyser0] disabled
+printk: legacy bootconsole [earlyser0] disabled
+APIC: Switch to symmetric I/O mode setup
+..TIMER: vector=0x30 apic1=0 pin1=2 apic2=-1 pin2=-1
+clocksource: tsc-early: mask: 0xffffffffffffffff max_cycles: 0x2f7a62d5034, max_idle_ns: 440795340533 ns
+Calibrating delay loop (skipped), value calculated using timer frequency.. 6587.58 BogoMIPS (lpj=13175164)
+Last level iTLB entries: 4KB 512, 2MB 255, 4MB 127
+Last level dTLB entries: 4KB 512, 2MB 255, 4MB 127, 1GB 0
+CPU: AMD QEMU Virtual CPU version 2.5+ (family: 0xf, model: 0x6b, stepping: 0x1)
+mitigations: Enabled attack vectors: SMT mitigations: off
+Spectre V2 : Vulnerable
+Spectre V1 : Vulnerable: __user pointer sanitization and usercopy barriers only; no swapgs barriers
+x86/fpu: x87 FPU will use FXSAVE
+pid_max: default: 32768 minimum: 301
+Mount-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+Mountpoint-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+Performance Events: PMU not available due to virtualization, using software events only.
+signal: max sigframe size: 1040
+Memory: 116260K/130552K available (4954K kernel code, 765K rwdata, 1172K rodata, 668K init, 568K bss, 13228K reserved, 0K cma-reserved)
+devtmpfs: initialized
+clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+posixtimers hash table entries: 512 (order: 0, 4096 bytes, linear)
+futex hash table entries: 256 (8192 bytes on 1 NUMA nodes, total 8 KiB, linear).
+clocksource: Switched to clocksource tsc-early
+platform rtc_cmos: registered platform RTC device (no PNP device found)
+workingset: timestamp_bits=62 max_order=15 bucket_order=0
+Serial: 8250/16550 driver, 4 ports, IRQ sharing disabled
+serial8250: ttyS0 at I/O 0x3f8 (irq = 4, base_baud = 115200) is a 16550A
+sched_clock: Marking stable (376496896, 7725973)->(388498526, -4275657)
+check access for rdinit=/init failed: -2, ignoring
+List of all partitions:
+No filesystem could mount root, tried: 
+
+Kernel panic - not syncing: VFS: Unable to mount root fs on "" or unknown-block(0,0)
+CPU: 0 UID: 0 PID: 1 Comm: swapper/0 Not tainted 6.18.0-rc4 #6 NONE 
+Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.17.0-6.fc43 04/01/2014
+Call Trace:
+ <TASK>
+ __dump_stack+0x19/0x20
+ dump_stack_lvl+0x20/0x50
+ dump_stack+0x14/0x16
+ vpanic+0xc9/0x260
+ panic+0x4a/0x50
+ mount_root_generic+0x184/0x280
+ ? rest_init+0x90/0x90
+ mount_block_root+0x3a/0x40
+ mount_root+0x5f/0x70
+ prepare_namespace+0x70/0xa0
+ kernel_init_freeable+0xb0/0xd0
+ kernel_init+0x19/0x110
+ ret_from_fork+0x84/0xd0
+ ? rest_init+0x90/0x90
+ ret_from_fork_asm+0x11/0x20
+ </TASK>
+Kernel Offset: disabled
+---[ end Kernel panic - not syncing: VFS: Unable to mount root fs on "" or unknown-block(0,0) ]---
+```
+
+**The kernel panicked!** 
+
+:::tip
+Press `CTRL`+`a` folloed by `x` to exit QEMU.
+:::
+
+This is normal, let's take a look at why it panicked.
+
+```
+List of all partitions:
+No filesystem could mount root, tried: 
+
+Kernel panic - not syncing: VFS: Unable to mount root fs on "" or unknown-block(0,0)
+```
+
+The reason for panic is that it was **not able to mount the root file** system. This is
+correct, we did not suply any disk drive that has a file system to use. The kernel
+cannot run without a root file system.
+
+
+## Build a Minimal System Filesystem
+
+Now that we have a kernel, we need to build a minimal file system and provide an `init` process.
+We will use the kernel's `initramfs` file system. This is an in-RAM file system that the kernel
+receives from the bootloader (QEMU in our case), mounts in RAM and uses as the root file system.
+
+### Build RAM disk
+
+We have to create the directory for the `initramfs`. We will refer to this directory as `$INIT_RAM_FS`.
+
+```bash
+$ mkdir initramfs
+```
+
+The kernel expects a compressed `cpio` file system type. To create an archive with the contents of
+`$INIT_RAM_FS` we use `find`, `cpio` and `gz` in the `$INIT_RAM_FS` folder.
+
+```bash
+$ find . -print0 | cpio --null -ov --format=newc | gzip -9 > ../initramfs.cpio.gz
+```
+
+### Boot the kernel with the RAM disk
+
+We have to add the `--initrd` argument to QEMU.
+
+```bash
+$ qemu-system -kernel arch/x86_64/boot/bzImage -nographic -append "earlyprintk=serial,ttyS0 console=ttyS0 debug" --initrd initramfs.cpio.gz
+```
+
+**The kernel boots, but it seems to show use the same panic!**
+
+This is strange, as we have supplied a root file system. The hint is the following line:
+
+```text
+check access for rdinit=/init failed: -2, ignoring
+```
+
+The kernel requires an `init` process to run. As it cannot find one, it will consider the RAM file system as being 
+invalid and panics.
+
+### Run a Rust app as `init`
+
+The RAM file system is completely empty, we have no shell or no libraries. The simplest `init` application
+is a compiled program that prints *Hello, world!*.
+
+As this is a Rust workshop, let's write a Rust program that acts as `init`.
+
+To create a new rust program (binary crate) we run `cargo init`. This will crate a folder with all the 
+required files.
+
+```text
+.
+├── Cargo.toml
+└── src
+    └── main.rs
+```
+
+The simplest init program is one that write *Hello, world!*. It is so simple that `cargo` has
+already written it for us.
+
+```rust
+use std::{thread, time::Duration};
+
+fn main() {
+    println!("Hello, world!");
+}
+```
+
+We use `cargo build` to build it.
+
+:::tip
+To optimize the binary size, you can use `cargo build --release`.
+:::
+
+We will find the executable in `target/debug/init` or `target/release/init`. We have to copy this file
+in the `$INIT_RAM_FS` folder and [rebuild the RAM disk](#build-ram-disk).
+
+Running the kernel with the new contants of the RAM disk still panics, but with a different panic message:
+
+```text
+Run /init as init process
+  with arguments:
+    /init
+  with environment:
+    HOME=/
+    TERM=linux
+Failed to execute /init (error -2)
+Run /sbin/init as init process
+  with arguments:
+    /sbin/init
+  with environment:
+    HOME=/
+    TERM=linux
+Run /etc/init as init process
+  with arguments:
+    /etc/init
+  with environment:
+    HOME=/
+    TERM=linux
+Run /bin/init as init process
+  with arguments:
+    /bin/init
+  with environment:
+    HOME=/
+    TERM=linux
+Run /bin/sh as init process
+  with arguments:
+    /bin/sh
+  with environment:
+    HOME=/
+    TERM=linux
+Kernel panic - not syncing: No working init found.  Try passing init= option to kernel. See Linux Documentation/admin-guide/init.rst for guidance.
+```
+
+As we can see, the kernel found the `init` executable, tried to run and failed with `Failed to execute /init (error -2)`. We compiled the
+`init` executable for Linux, which means it requires Linux libraries. Running `ldd` on the `init` executable will write:
+
+```bash
+$ ldd target/debug/init
+    linux-vdso.so.1 (0x00007f45a855e000)
+    libgcc_s.so.1 => /lib64/libgcc_s.so.1 (0x00007f45a84ba000)
+    libc.so.6 => /lib64/libc.so.6 (0x00007f45a82c6000)
+    /lib64/ld-linux-x86-64.so.2 (0x00007f45a8560000)
+```
+
+This means that our `init` depends on these libraries. As we have an empty file system, the executable cannot be loaded. We have
+to build `init` as a **static executable**.
+
+Rust provides the `x86_64-unknown-linux-musl`  target for building static x86 64 bit Linux executables. We have to ask `cargo` to
+use this target.
+
+```shell
+$ cargo build --target x86_64-unknown-linux-musl
+```
+
+:::note
+If the build fails, you might have to install the `x86_64-unknown-linux-musl` target using:
+
+```shell
+$ rustup target add x86_64-unknown-linux-musl
+```
+:::
+
+The static binary will be placved in `target/x86_64-unknown-linux-musl/debug/init`. Running `ldd` in this file will print `statically linked`
+and this is what we axctually want. We can now copy our `init` executable to `$INIT_RAM_FS` and [rebuild it](#build-ram-disk).
+
+:::tip
+
+To avoid using the `--target` argument with cargo at every build, we can specify the target a `.cargo/config.toml` file.
+
+```toml
+[build]
+target = "x86_64-unknown-linux-musl"
+```
+
+You instruct cargo to install all the target and components that you need before the build using the `rust-toolchain.toml` file.
+
+```toml
+# toolchain
+```
+
+:::
+
+Rumnning the kernel still panics 🤨, but with a different error:
+
+```text
+Run /init as init process
+  with arguments:
+    /init
+  with environment:
+    HOME=/
+    TERM=linux
+Hello, world!
+Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000000
+```
+
+The `init` process has run, we can see the `Hello, world!` messsage, but it exited. `init` is not allowed to
+exit and the kernel will panic if it does. To prevent this, we just add an infinite loop.
+
+```rust
+use std::{thread, time::Duration};
+
+fn main() {
+    println!("Hello, world!");
+
+    loop {
+        thread::sleep(Duration::from_secs(1));
+    }
+}
+```
+
+If we build it and run the kernel, we can see it finally works ... sort of, it does nothing.
+
+```text
+Run /init as init process
+  with arguments:
+    /init
+  with environment:
+    HOME=/
+    TERM=linux
+Hello, world!
+```
+
+## Setup BusyBox
+
+We have created our own `init`, but the syuste is useless when using it. We need to be able to 
+run a shell and execute shell commands. A tool that provides and `init` and the shell commands
+is [BusyBox](https://busybox.net/).
+
+We need to statically compile it and install it in the RAM disk.
+
+Download and unarchive <a href="/busybox/busybox-1.37.0.tar.bz2">busybox version 1.37</a>.
+
+### Build BusyBox
+
+```bash
+$ make clean
+```
+
+```bash
+$ make menuconfig
+```
+
+:::warning
+BusyBox's build script has a bug when it checks for `ncurses-devel`. Instead of checking if `lx-dialog` exists, it check for 
+a compilation error. If you get this error, you have to patch the `scripts/kconfig/lxdialog/check-lxdialog.sh` file
+to make sure it writes `int main` in the `check` function.
+
+```sh
+# Check if we can link to ncurses 
+check() {
+        $cc -x c - -o $tmp 2>/dev/null <<'EOF'
+#include CURSES_LOC
+int main() {}
+EOF
+	if [ $? != 0 ]; then
+	    echo " *** Unable to find the ncurses libraries or the"       1>&2
+	    echo " *** required header files."                            1>&2
+	    echo " *** 'make menuconfig' requires the ncurses libraries." 1>&2
+	    echo " *** "                                                  1>&2
+	    echo " *** Install ncurses (ncurses-devel) and try again."    1>&2
+	    echo " *** "                                                  1>&2
+	    exit 1
+	fi
+}
+
+```
+:::
+
+We have to build busy box as a static binary so it can run on our minimal system without
+the need of any shared libraries.
+
+BusyBox has a bug and newer compiler will fail to compile the `tc` command, so we need to disable it.
+:::
+
+```text
+- Settings
+  - Build static binary (no shared libs)
+- Networking utilities
+  - tc (8.3 kb) (DISABLE THIS)
+```
+
+We can now build busybox using `make`.
+
+```bash
+$ make -jn # replace n with the number of cores that your laptop has
+```
+
+### Install BusyBox
+
+Installing busybox means creating the required folders and copying the `busybox` executable and 
+the links to it to `$INIT_RAM_FS`. The `install` target will copy `busybox` and create 
+the required folders structure in the `_install` folder. 
+
+```shell
+$ make install
+```
+
+This is how the `_install` folder should look like:
+
+```text {limit: 10}
+_install
+├── bin
+...
+│   ├── busybox
+│   ├── cat -> busybox
+│   ├── chattr -> busybox
+│   ├── chgrp -> busybox
+│   ├── chmod -> busybox
+│   ├── chown -> busybox
+│   ├── conspy -> busybox
+│   ├── cp -> busybox
+...
+│   ├── ls -> busybox
+...
+├── linuxrc -> bin/busybox
+├── sbin
+...
+│   ├── fdisk -> ../bin/busybox
+...
+└── usr
+    ├── bin
+    │   ├── [ -> ../../bin/busybox
+    │   ├── [[ -> ../../bin/busybox
+    │   ├── ascii -> ../../bin/busybox
+    ...
+    └── sbin
+        ├── addgroup -> ../../bin/busybox
+        ├── add-shell -> ../../bin/busybox
+        ├── adduser -> ../../bin/busybox
+        ...
+
+6 directories, 403 files
+```
+
+To use BusyBox, we need to create all the requitred folders in the RAM disk.
+
+```bash
+$ mkdir -p bin sbin etc proc dev sys usr/bin usr/sbin
+```
+
+We only really need to copy the `_install/bin/busybox` executable to `$INIT_RAM_FS`.
+
+:::note
+We will instruct BusyBox to install all the links at boot time. If you want to avoid installing 
+them at boot, you can copy all the links using
+
+```shell
+$ cp -r _install/ $INIT_RAM_FS/
+```
+:::
+
+### The `init` script
+
+BusyBox provides a shell interpreter which means we can now use write and `init` shell script. 
+Replace the `init` rust binary with the following shell script.
+
+```bash
+#!/bin/busybox sh
+
+# Install the busybox commands and set the PATH variable
+/bin/busybox --install -s
+
+# Mount kernel filesystems
+mount -t proc none /proc
+mount -t sysfs none /sys
+mount -t devtmpfs devtmpfs /dev
+
+# Write a benner
+echo << !
+
+Welcome to the Rust Kernel Development Minimal Linux!
+Press CTRL+a x to exit QEMU
+
+!
+
+# Run a shell
+exec /bin/sh
+```
+
+:::note
+Please make sure you name the script `init` (with no `.sh`) and make it executable (`chmod a+x init`).
+:::
+
+The file system layout that we will use should look like the following:
+
+```text
+initramfs
+├── bin
+│   └── busybox
+├── dev
+├── etc
+├── init
+├── proc
+├── sbin
+├── sys
+└── usr
+    ├── bin
+    └── sbin
+```
+
+We have to [rebuild the RAM disk](#build-ram-disk) and boot the kernel with the new RAM disk. We should have access to a
+full shell now.
