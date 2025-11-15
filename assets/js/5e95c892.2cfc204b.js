@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkupb_rustworkshop_github_io=self.webpackChunkupb_rustworkshop_github_io||[]).push([[9647],{8122:(s,e,r)=>{r.r(e),r.d(e,{default:()=>c});r(6540);var u=r(4164),t=r(1082),o=r(204),h=r(2831),p=r(1410),a=r(4848);function c(s){return(0,a.jsx)(t.e3,{className:(0,u.A)(o.G.wrapper.docsPages),children:(0,a.jsx)(p.A,{children:(0,h.v)(s.route.routes)})})}}}]);
