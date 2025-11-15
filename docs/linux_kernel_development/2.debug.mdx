@@ -1,0 +1,151 @@
+# Debug
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Writing kernel modules is difficult as they run within the kernel and an error in the module might result in a kernel OOPS or panic.
+The kernel exposes several tools for debugging. The mechanisms are very similar to hardware debuggers.
+
+## Kernel Configuration
+
+To use debuggers, we have to enable kernel debugging components.
+
+:::note
+These components should not be enabled in production builds, as they expose kernel objects that can be used to exploit it.
+:::
+
+We have to run `make menuconfig` and select the following components:
+
+```text
+- Kernel hacking
+  - Compile-time checks and compiler options
+    - Provide GDB scripts for kernel debugging
+    - Compile the kernel with frame pointers
+    - Reduice debugging infromation (DISABLE)
+  - Kernel Debuggng
+```
+
+## Run QEMU with debug server
+
+We use the `-s` parameter to enable QEMU's `gdb` server. This allows `gdb` to connect to it and debug the running kernel.
+
+```bash
+$ qemu-system-x86_64 -kernel "$KDIR/arch/x86_64/boot/bzImage" \
+                    --initrd build/initramfs.cpio.gz \
+                    -nographic \
+                    -append "earlyprintk=serial,ttyS0 console=ttyS0" \
+                    -s
+```
+
+QEMU will start the `gdb` server on `127.0.0.1:1234`.
+
+ 
+## Enable GDB Scrips
+
+The kernel provides gdb scripts that add several commands to retrieve symbols. These need to be loaded by
+gdb at startup. The scripts are located in the kernel's folder in `scripts/gdb`.
+
+:::danger
+
+For security reasons, `gdb` will prfevent loading of arbitrary scriptys unless they are specifically named
+in `~/.config/gdb/gdbinit`. Please add the following line for everfy kernel folder (`current` and `next`)
+that you use.
+
+```gdb
+add-auto-load-safe-path $KDIR/scripts/gdb/vmlinux-gdb.py         
+```
+
+Replace `$KDIR` with the path to the kernel directory
+:::
+
+## Debugger Configuration
+
+We have to instruct the Rust compiler to include debug information and not to optimzie code. This is done
+by setting adding to the `$KRUSTFLAGS` in the `Makefile` the `-g -C opt-level=0`.
+
+```makefile
+export KRUSTFLAGS := --remap-path-prefix=../= -g -C opt-level=0
+```
+
+Failure to add these settings will make debugging unreliable.
+
+<Tabs>
+
+<TabItem value="gdb" label="GDB">
+
+The simples way to debug the kernel is using `gdb` directly. Make sure you have booted the kernel in a 
+QEMU session that has the `-s` argument.
+
+In your module's folder run:
+
+```bash
+$ gdb -ex "target remote :1234" -ex "lx-symbols"  $KDIR/vmlinux -tui
+```
+
+This will start `gdb` and: 
+1. connect to the `127.0.0.1:1234` `gdb` server 
+2. run `lx-symbols` to load the kernel symbols
+3. start the TUI and display the kernel's code
+
+:::tip
+If `gdb` errors saying that `lx-symbols` is not available, please make sure you have added the `gdb` kernel
+scripts to `~/.config/gdb/gdbinit`.
+:::
+
+</TabItem>
+
+<TabItem value="vscode" label="Visual Studio Code">
+
+
+Edit the `.vscode/launch.json` file. The `program` field points to the `vmlinux` file in the kernel folder.
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Linux Kernel with GDB",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/../linux-6.18-rc4/vmlinux",
+      "cwd": "${workspaceFolder}",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "MIMode": "gdb",
+      "externalConsole": true,
+      "miDebuggerServerAddress": "127.0.0.1:1234"
+    }
+  ]
+}
+```
+
+After the debugger starts, run `-exec lx-symbols` in the console to ask `gdb` to read the symbols.
+
+</TabItem>
+
+<TabItem value="zed" label="Zed">
+
+Edit the `.zed/debug.json` file. The `program` filed points to the `vmlinux` file in the kernel folder.
+
+```json
+[
+  {
+    "label": "Attach GDB",
+    "adapter": "GDB",
+    "request": "attach",
+    "program": "$ZED_WORKTREE_ROOT/../linux-6.18-rc4/vmlinux",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "target": "127.0.0.1:1234"
+  }
+]
+```
+After the debugger starts, run `lx-symbols` in the console to ask `gdb` to read the symbols.
+
+</TabItem>
+
+</Tabs>
+
+# Exercises
+
+1. Place breakpoints on the `Module::init` function and step through it.
+2. Store the current process in a variable and inspect it with the debugger.
+3. Place a breakpoint on the `Drop::drop` function and step through it.

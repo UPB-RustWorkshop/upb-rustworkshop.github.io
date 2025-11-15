@@ -1,5 +1,5 @@
 ---
-slide_position: 6
+sidebar_position: 8
 title: 🦀 Rust Open-Source Hackathon
 ---
 
