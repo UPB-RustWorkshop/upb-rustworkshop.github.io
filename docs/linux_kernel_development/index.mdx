@@ -9,46 +9,66 @@ import TabItem from '@theme/TabItem';
 
 ## Prerequisits
 
-- Linux x86 64bit
-  - We recommend Ubuntu LTS or Fedora
+- Linux x86 64bit or ARM64
+  - We recommend Ubuntu 24.04 LTS or Fedora 43
 - GCC Compiler
 - LLVM Compiler
 - QEMU
 - Rust 1.90
 - Code Editor with [rust-analyzer](https://rust-analyzer.github.io/) support
 
+### Instal Rust
+
+```shell
+$ rustup
+$ rustup components add rust-src
+```
+
+### Packages
 
 <Tabs>
 
-<TabItem value="ubuntu" label="Ubuntu">
+<TabItem value="ubuntu" label="Ubuntu 24.04">
 
 ```shell
 # Update the package library
 $ sudo apt-get
 
 # Kernel Compilation
-$ sudo apt-get install -y build-essential git libncurses-dev clang flex bison lld libelf-dev
+$ sudo apt-get install -y build-essential git libncurses-dev clang flex bison lld libelf-dev bindgen-cli
 
-# Install QEMU
-$ sudo apt-get install -y qemu-system
+# Debug
+$ sudo apt-get install -y gdb
+
+# Install QEMU for x86
+$ sudo apt-get install -y qemu-system-x86_64 
+
+# Install QEMU for ARM64
+$ $ sudo apt-get install -y qemu-system-aarch64
 ```
 
 </TabItem>
 
-<TabItem value="fedora" label="Fedora">
+<TabItem value="fedora" label="Fedora 43">
 
 ```shell
 # Update the package library
-$ dnf update
+$ sudo dnf update
 
 # Kernel Compilation
-$ dnf install -y make clang ncurses-devel flex bison lld llvm elfutils-libelf-devel glibc-static
+$ sudo dnf install -y make clang ncurses-devel flex bison lld llvm elfutils-libelf-devel glibc-static bindgen-cli
 
 # BusyBox Compilation
-$ dnf install -y glibc-static
+$ sudo dnf install -y glibc-static
 
-# Install QEMU
-$ dnf install -y qemu-system-x86_64
+# Debug
+$ sudo dnf install -y gdb
+
+# Install QEMU x86
+$ sudo dnf install -y qemu-system-x86_64 
+
+#Install QEMU for ARM64
+$ sudo dnf install -y qemu-system-aarch64
 ```
 
 </TabItem>
@@ -119,6 +139,11 @@ $ make LLVM=1 menuconfig
 
 Make sure the following components are selected:
 
+:::warning
+Please make sure you select all the module components (displayed with \< \>) using **\<*\>** and not \<M\>. We want all the modules
+compiled into the kernel and as not seperate modules.
+:::
+
 ```
 - 64bit Kernel (no Rust otherwise)
 - General setup 
@@ -141,16 +166,45 @@ Make sure the following components are selected:
       - Automount devtmpfs at /dev, after kernel mounted the rootfs
   - Character devices
     - Enable tty
-    - Serial drivers
-      - 8250/16550 and compatible serial support
-      - Console on 8250/16550 and compatible serial port
 - File systems 
   - Pseudo filesystems
     - /proc file system support
-    - Sysctl support (/proc/sys)
-    - sysfs file system support
+    - Sysctl support (/proc/sys)  <-- might not be available
+    - sysfs file system support   <-- might not be available
     - Userspace-driven configuration filesystem
 ```
+
+Depending on the platform that we have, we have to select the propoer serial port.
+
+<Tabs>
+
+<TabItem value="x86" label="x86_64">
+
+```
+- Device Drivers
+  - Character devices
+    - Serial drivers
+      - 8250/16550 and compatible serial support
+      - Console on 8250/16550 and compatible serial port
+```
+
+</TabItem>
+
+<TabItem value="arm64" label="ARM64">
+
+```
+- Device Drivers
+  - Character devices
+    - Serial drivers
+      - ARM AMBA PL010 serial port support
+        - Support for console on AMBA serial port
+      - ARM AMBA PL011 serial port support
+        - Support for console on AMBA serial port
+```
+
+</TabItem>
+
+</Tabs>
 
 ### Build the kernel
 
@@ -174,8 +228,14 @@ We will use QEMU to run a machine and boot our kernel. Instead of using a bootlo
 provides a minimal bootloader that can load a `multiboot v1` compatible kernel that is 
 supplied using the `-kernel` argument. The Linux kernel is compatible. 
 
+<Tabs>
+
+<TabItem value="x86" label="x86_64">
+
 ```bash
-$ qemu-system-x86_64 -kernel arch/x86_64/boot/bzImage -nographic -append "earlyprintk=serial,ttyS0 console=ttyS0 debug"
+$ qemu-system-x86_64 -nographic \
+                     -kernel arch/x86_64/boot/bzImage \ 
+                     -append "earlyprintk=serial,ttyS0 console=ttyS0 debug"
 ```
 
 Running QEMU should print an output similar to:
@@ -308,10 +368,135 @@ Kernel Offset: disabled
 ---[ end Kernel panic - not syncing: VFS: Unable to mount root fs on "" or unknown-block(0,0) ]---
 ```
 
+</TabItem>
+
+<TabItem value="arm64" label="ARM64">
+
+```bash
+$ qemu-system-aarch64 -machine virt \
+                      -cpu cortex-a53 \
+                      -smp 1 \
+                      -m 512M \
+                      -nographic \
+                      -kernel arch/arm64/boot/Image \
+                      -append "earlyprintk=serial,ttyAMA0 console=ttyAMA0 debug"
+```
+
+We use a virtual Cortex-A53 with one core and 512 MB of RAM.
+
+Running QEMU should print an output similar to:
+
+```text
+Booting Linux on physical CPU 0x0000000000 [0x410fd034]
+Linux version 6.18.0-rc5 (alexandru@localhost.localdomain) (clang version 21.1.5 (Fedora 21.1.5-1.fc43), LLD 21.1.5) #1 SMP Sun Nov 16 12:39:05 EET 2025
+random: crng init done
+Machine model: linux,dummy-virt
+OF: reserved mem: Reserved memory: No reserved-memory node in the DT
+Zone ranges:
+  DMA      [mem 0x0000000040000000-0x000000005fffffff]
+  DMA32    empty
+  Normal   empty
+Movable zone start for each node
+Early memory node ranges
+  node   0: [mem 0x0000000040000000-0x000000005fffffff]
+Initmem setup node 0 [mem 0x0000000040000000-0x000000005fffffff]
+psci: probing for conduit method from DT.
+psci: PSCIv1.1 detected in firmware.
+psci: Using standard PSCI v0.2 function IDs
+psci: Trusted OS migration not required
+psci: SMC Calling Convention v1.0
+percpu: Embedded 15 pages/cpu s24480 r8192 d28768 u61440
+Detected VIPT I-cache on CPU0
+alternatives: applying boot alternatives
+Kernel command line: 
+printk: log buffer data + meta data: 131072 + 458752 = 589824 bytes
+Dentry cache hash table entries: 65536 (order: 7, 524288 bytes, linear)
+Inode-cache hash table entries: 32768 (order: 6, 262144 bytes, linear)
+software IO TLB: SWIOTLB bounce buffer size adjusted to 0MB
+software IO TLB: area num 1.
+software IO TLB: mapped [mem 0x000000005f580000-0x000000005f600000] (0MB)
+Built 1 zonelists, mobility grouping on.  Total pages: 131072
+mem auto-init: stack:all(zero), heap alloc:off, heap free:off
+SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=1, Nodes=1
+rcu: Hierarchical RCU implementation.
+rcu: 	RCU restricting CPUs from NR_CPUS=512 to nr_cpu_ids=1.
+rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=1
+NR_IRQS: 64, nr_irqs: 64, preallocated irqs: 0
+Root IRQ handler: gic_handle_irq
+rcu: srcu_init: Setting srcu_struct sizes based on contention.
+arch_timer: cp15 timer running at 62.50MHz (virt).
+clocksource: arch_sys_counter: mask: 0x1ffffffffffffff max_cycles: 0x1cd42e208c, max_idle_ns: 881590405314 ns
+sched_clock: 57 bits at 63MHz, resolution 16ns, wraps every 4398046511096ns
+Console: colour dummy device 80x25
+printk: legacy console [tty0] enabled
+Calibrating delay loop (skipped), value calculated using timer frequency.. 125.00 BogoMIPS (lpj=250000)
+pid_max: default: 32768 minimum: 301
+Mount-cache hash table entries: 1024 (order: 1, 8192 bytes, linear)
+Mountpoint-cache hash table entries: 1024 (order: 1, 8192 bytes, linear)
+cacheinfo: Unable to detect cache hierarchy for CPU 0
+rcu: Hierarchical SRCU implementation.
+rcu: 	Max phase no-delay instances is 1000.
+smp: Bringing up secondary CPUs ...
+smp: Brought up 1 node, 1 CPU
+SMP: Total of 1 processors activated.
+CPU: All CPU(s) started at EL1
+CPU features: detected: 32-bit EL0 Support
+CPU features: detected: CRC32 instructions
+alternatives: applying system-wide alternatives
+Memory: 504944K/524288K available (3008K kernel code, 658K rwdata, 1140K rodata, 576K init, 373K bss, 17664K reserved, 0K cma-reserved)
+devtmpfs: initialized
+clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+posixtimers hash table entries: 512 (order: 1, 8192 bytes, linear)
+futex hash table entries: 256 (16384 bytes on 1 NUMA nodes, total 16 KiB, linear).
+31280 pages in range for non-PLT usage
+522800 pages in range for PLT usage
+DMA: preallocated 128 KiB GFP_KERNEL pool for atomic allocations
+DMA: preallocated 128 KiB GFP_KERNEL|GFP_DMA pool for atomic allocations
+DMA: preallocated 128 KiB GFP_KERNEL|GFP_DMA32 pool for atomic allocations
+ASID allocator initialised with 65536 entries
+Serial: AMBA PL011 UART driver
+9000000.pl011: ttyAMA0 at MMIO 0x9000000 (irq = 13, base_baud = 0) is a PL011 rev1
+printk: console [ttyAMA0] enabled
+clocksource: Switched to clocksource arch_sys_counter
+workingset: timestamp_bits=62 max_order=17 bucket_order=0
+Serial: AMBA driver
+clk: Disabling unused clocks
+check access for rdinit=/init failed: -2, ignoring
+List of all partitions:
+No filesystem could mount root, tried: 
+
+Kernel panic - not syncing: VFS: Unable to mount root fs on "" or unknown-block(0,0)
+CPU: 0 UID: 0 PID: 1 Comm: swapper/0 Not tainted 6.18.0-rc5 #1 NONE 
+Hardware name: linux,dummy-virt (DT)
+Call trace:
+ show_stack+0x14/0x1c (C)
+ __dump_stack+0x24/0x30
+ dump_stack_lvl+0x20/0x64
+ dump_stack+0x14/0x1c
+ vpanic+0x120/0x2e0
+ vpanic+0x0/0x2e0
+ mount_root_generic+0x194/0x2cc
+ mount_block_root+0x4c/0x58
+ mount_root+0x70/0x7c
+ prepare_namespace+0x7c/0xb8
+ kernel_init_freeable+0xc0/0xdc
+ kernel_init+0x1c/0x11c
+ ret_from_fork+0x10/0x20
+Kernel Offset: disabled
+CPU features: 0x000000,00000000,00000000,0400400b
+Memory Limit: none
+---[ end Kernel panic - not syncing: VFS: Unable to mount root fs on "" or unknown-block(0,0) ]---
+```
+
+</TabItem>
+
+</Tabs>
+
 **The kernel panicked!** 
 
 :::tip
-Press `CTRL`+`a` folloed by `x` to exit QEMU.
+Press `CTRL`+`a` followed by `x` to exit QEMU.
 :::
 
 This is normal, let's take a look at why it panicked.
@@ -351,11 +536,37 @@ $ find . -print0 | cpio --null -ov --format=newc | gzip -9 > ../initramfs.cpio.g
 
 ### Boot the kernel with the RAM disk
 
-We have to add the `--initrd` argument to QEMU.
+We have to add the `-initrd` argument to QEMU.
+
+<Tabs>
+
+<TabItem value="x86" label="x86_64">
 
 ```bash
-$ qemu-system-x86_64 -kernel arch/x86_64/boot/bzImage -nographic -append "earlyprintk=serial,ttyS0 console=ttyS0 debug" --initrd initramfs.cpio.gz
+$ qemu-system-x86_64 -nographic \
+                     -kernel arch/x86_64/boot/bzImage \ 
+                     -append "earlyprintk=serial,ttyS0 \ console=ttyS0 debug" \ 
+                     -initrd initramfs.cpio.gz
 ```
+
+</TabItem>
+
+<TabItem value="arm64" label="ARM64">
+
+```bash
+$ qemu-system-aarch64 -machine virt \
+                      -cpu cortex-a53 \
+                      -smp 1 \
+                      -m 512M \
+                      -nographic \
+                      -kernel arch/arm64/boot/Image \
+                      -append "earlyprintk=serial,ttyAMA0 console=ttyAMA0 debug" \
+                      -initrd initramfs.cpio.gz
+```
+
+</TabItem>
+
+</Tabs>
 
 **The kernel boots, but it seems to show use the same panic!**
 
@@ -443,6 +654,10 @@ Kernel panic - not syncing: No working init found.  Try passing init= option to 
 As we can see, the kernel found the `init` executable, tried to run and failed with `Failed to execute /init (error -2)`. We compiled the
 `init` executable for Linux, which means it requires Linux libraries. Running `ldd` on the `init` executable will write:
 
+<Tabs>
+
+<TabItem value="x86" label="x86_64">
+
 ```bash
 $ ldd target/debug/init
     linux-vdso.so.1 (0x00007f45a855e000)
@@ -469,8 +684,8 @@ $ rustup target add x86_64-unknown-linux-musl
 ```
 :::
 
-The static binary will be placved in `target/x86_64-unknown-linux-musl/debug/init`. Running `ldd` in this file will print `statically linked`
-and this is what we axctually want. We can now copy our `init` executable to `$INIT_RAM_FS` and [rebuild it](#build-ram-disk).
+The static binary will be placated in `target/x86_64-unknown-linux-musl/debug/init`. Running `ldd` in this file will print `statically linked`
+and this is what we actually want. We can now copy our `init` executable to `$INIT_RAM_FS` and [rebuild it](#build-ram-disk).
 
 :::tip
 
@@ -484,12 +699,71 @@ target = "x86_64-unknown-linux-musl"
 You instruct cargo to install all the target and components that you need before the build using the `rust-toolchain.toml` file.
 
 ```toml
-# toolchain
+channel = "1.91.1"
+components = [ "rustfmt", "clippy", "rust-analyzer", "llvm-tools", "rust-src" ]
+targets = [ "x86_64-unknown-linux-musl"]
 ```
 
 :::
 
-Rumnning the kernel still panics 🤨, but with a different error:
+</TabItem>
+
+<TabItem value="arm64" label="ARM64">
+
+```bash
+$ ldd target/debug/init
+    linux-vdso.so.1 (0x0000ffffadf7c000)
+    libgcc_s.so.1 => /lib64/libgcc_s.so.1 (0x0000ffffade90000)
+    libc.so.6 => /lib64/libc.so.6 (0x0000ffffadcc0000)
+    /lib/ld-linux-aarch64.so.1 (0x0000ffffadf40000)
+```
+
+This means that our `init` depends on these libraries. As we have an empty file system, the executable cannot be loaded. We have
+to build `init` as a **static executable**.
+
+Rust provides the `aarch64-unknown-linux-musl`  target for building static x86 64 bit Linux executables. We have to ask `cargo` to
+use this target.
+
+```shell
+$ cargo build --target aarch64-unknown-linux-musl
+```
+
+:::note
+If the build fails, you might have to install the `aarch64-unknown-linux-musl` target using:
+
+```shell
+$ rustup target add aarch64-unknown-linux-musl
+```
+:::
+
+The static binary will be placated in `target/aarch64-unknown-linux-musl/debug/init`. Running `ldd` in this file will print `statically linked`
+and this is what we actually want. We can now copy our `init` executable to `$INIT_RAM_FS` and [rebuild it](#build-ram-disk).
+
+:::tip
+
+To avoid using the `--target` argument with cargo at every build, we can specify the target a `.cargo/config.toml` file.
+
+```toml
+[build]
+target = "aarch64-unknown-linux-musl"
+```
+
+You instruct cargo to install all the target and components that you need before the build using the `rust-toolchain.toml` file.
+
+```toml
+[toolchain]
+channel = "1.91.1"
+components = [ "rustfmt", "clippy", "rust-analyzer", "llvm-tools", "rust-src" ]
+targets = [ "aarch64-unknown-linux-musl"]
+```
+
+:::
+
+</TabItem>
+
+</Tabs>
+
+Ruminating the kernel still panics 🤨, but with a different error:
 
 ```text
 Run /init as init process
@@ -549,29 +823,44 @@ $ make clean
 $ make menuconfig
 ```
 
-:::warning
+:::danger
 BusyBox's build script has a bug when it checks for `ncurses-devel`. Instead of checking if `lx-dialog` exists, it check for 
 a compilation error. If you get this error, you have to patch the `scripts/kconfig/lxdialog/check-lxdialog.sh` file
 to make sure it writes `int main` in the `check` function.
 
-```sh
-# Check if we can link to ncurses 
-check() {
-        $cc -x c - -o $tmp 2>/dev/null <<'EOF'
-#include CURSES_LOC
-int main() {}
-EOF
-	if [ $? != 0 ]; then
-	    echo " *** Unable to find the ncurses libraries or the"       1>&2
-	    echo " *** required header files."                            1>&2
-	    echo " *** 'make menuconfig' requires the ncurses libraries." 1>&2
-	    echo " *** "                                                  1>&2
-	    echo " *** Install ncurses (ncurses-devel) and try again."    1>&2
-	    echo " *** "                                                  1>&2
-	    exit 1
-	fi
-}
+```diff showLineNumbers=46
+ # Check if we can link to ncurses
+ check() {
+         $cc -x c - -o $tmp 2>/dev/null <<'EOF'
+ #include CURSES_LOC
+-main() {}
++int main() {}
+ EOF
+ 	if [ $? != 0 ]; then
+ 	   echo " *** Unable to find the ncurses libraries or the"       1>&2
+ 	   echo " *** required header files."                            1>&2
+ 	   echo " *** 'make menuconfig' requires the ncurses libraries." 1>&2
+ 	   echo " *** "                                                  1>&2
+ 	   echo " *** Install ncurses (ncurses-devel) and try again."    1>&2
+ 	   echo " *** "                                                  1>&2
+ 	   exit 1
+ 	fi
+```
+:::
 
+:::danger
+BusyBox has a bug on ARM64, we have to patch the `libbb/hasn_md5_sha.c` file at line 1316
+
+```diff showLineNumbers=1313
+ 	hash_size = 8;
+ 	if (ctx->process_block == sha1_process_block64
+ #if ENABLE_SHA1_HWACCEL
++# if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
+ 	 || ctx->process_block == sha1_process_block64_shaNI
++# endif
+ #endif
+ 	) {
+ 		hash_size = 5;
 ```
 :::
 
@@ -649,15 +938,6 @@ $ mkdir -p bin sbin etc proc dev sys usr/bin usr/sbin
 
 We only really need to copy the `_install/bin/busybox` executable to `$INIT_RAM_FS`.
 
-:::note
-We will instruct BusyBox to install all the links at boot time. If you want to avoid installing 
-them at boot, you can copy all the links using
-
-```shell
-$ cp -r _install/* $INIT_RAM_FS/
-```
-:::
-
 ### The `init` script
 
 BusyBox provides a shell interpreter which means we can now use write and `init` shell script. 
@@ -709,3 +989,13 @@ initramfs
 
 We have to [rebuild the RAM disk](#build-ram-disk) and boot the kernel with the new RAM disk. We should have access to a
 full shell now.
+
+:::note
+We instructed BusyBox to install all the links at boot time using the `/bin/busybox --install -s` command in the `init` script.
+BusyBox's `make install` command generates in `_install` all the folders and links that `busybox --install -s` does at
+runtime. To avoid the runtime generation, we can copy all the files from `_install` to `$INIT_RAM_FS`.
+
+```shell
+$ cp -r _install/* $INIT_RAM_FS/
+```
+:::

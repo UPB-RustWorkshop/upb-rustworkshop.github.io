@@ -18,24 +18,49 @@ We have to run `make menuconfig` and select the following components:
 
 ```text
 - Kernel hacking
+  - Kernel Debugging
+  - Debug information -> Rely on the toolchain's implicit default DWARF version
   - Compile-time checks and compiler options
     - Provide GDB scripts for kernel debugging
     - Compile the kernel with frame pointers
-    - Reduice debugging infromation (DISABLE)
-  - Kernel Debuggng
+    - Reduce debugging information (DISABLE)
 ```
 
 ## Run QEMU with debug server
 
 We use the `-s` parameter to enable QEMU's `gdb` server. This allows `gdb` to connect to it and debug the running kernel.
 
+<Tabs>
+
+<TabItem value="x86" label="x86_64">
+
 ```bash
-$ qemu-system-x86_64 -kernel "$KDIR/arch/x86_64/boot/bzImage" \
-                    --initrd build/initramfs.cpio.gz \
-                    -nographic \
-                    -append "earlyprintk=serial,ttyS0 console=ttyS0" \
-                    -s
+$ qemu-system-x86_64 -nographic \
+                     -kernel "$KDIR/arch/x86_64/boot/bzImage" \
+                     -initrd build/initramfs.cpio.gz \
+                     -append "earlyprintk=serial,ttyS0 console=ttyS0" \
+                     -s
 ```
+
+</TabItem>
+
+<TabItem value="arm64" label="ARM64">
+
+```bash
+$ qemu-system-aarch64 -machine virt \
+                      -cpu cortex-a53 \
+                      -smp 1 \
+                      -m 512M \
+                      -nographic \
+                      -kernel arch/arm64/boot/Image \
+                      -initrd build/initramfs.cpio.gz \
+                      -append "earlyprintk=serial,ttyAMA0 console=ttyAMA0 debug"
+                      -s
+```
+
+</TabItem>
+
+</Tabs>
 
 QEMU will start the `gdb` server on `127.0.0.1:1234`.
 
@@ -99,6 +124,11 @@ scripts to `~/.config/gdb/gdbinit`.
 
 Edit the `.vscode/launch.json` file. The `program` field points to the `vmlinux` file in the kernel folder.
 
+:::danger
+Please make sure to replace `KDIR` with the actual path of the kernel. Visual Studio Code's `launch.json`
+does not recognize the `$KDIR` environment variable.
+:::
+
 ```json
 {
   "version": "0.2.0",
@@ -107,7 +137,7 @@ Edit the `.vscode/launch.json` file. The `program` field points to the `vmlinux`
       "name": "Debug Linux Kernel with GDB",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/../linux-6.18-rc4/vmlinux",
+      "program": "$KDIR/vmlinux",
       "cwd": "${workspaceFolder}",
       "miDebuggerPath": "/usr/bin/gdb",
       "MIMode": "gdb",
@@ -126,13 +156,18 @@ After the debugger starts, run `-exec lx-symbols` in the console to ask `gdb` to
 
 Edit the `.zed/debug.json` file. The `program` filed points to the `vmlinux` file in the kernel folder.
 
+:::danger
+Please make sure to replace `KDIR` with the actual path of the kernel. Zed's `debug.json`
+does not recognize the `$KDIR` environment variable.
+:::
+
 ```json
 [
   {
     "label": "Attach GDB",
     "adapter": "GDB",
     "request": "attach",
-    "program": "$ZED_WORKTREE_ROOT/../linux-6.18-rc4/vmlinux",
+    "program": "$KDIR/linux-6.18-rc4/vmlinux",
     "cwd": "$ZED_WORKTREE_ROOT",
     "target": "127.0.0.1:1234"
   }
