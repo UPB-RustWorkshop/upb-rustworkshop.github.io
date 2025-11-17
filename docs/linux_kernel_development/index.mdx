@@ -9,46 +9,60 @@ import TabItem from '@theme/TabItem';
 
 ## Prerequisits
 
-- Linux x86 64bit
-  - We recommend Ubuntu LTS or Fedora
+- Linux x86 64bit or ARM64
+  - We recommend Ubuntu 24.04 LTS or Fedora 43
 - GCC Compiler
 - LLVM Compiler
 - QEMU
 - Rust 1.90
 - Code Editor with [rust-analyzer](https://rust-analyzer.github.io/) support
 
+### Instal Rust
+
+```shell
+$ rustup
+$ rustup components add rust-src
+```
+
+### Packages
 
 <Tabs>
 
-<TabItem value="ubuntu" label="Ubuntu">
+<TabItem value="ubuntu" label="Ubuntu 24.04">
 
 ```shell
 # Update the package library
 $ sudo apt-get
 
 # Kernel Compilation
-$ sudo apt-get install -y build-essential git libncurses-dev clang flex bison lld libelf-dev
+$ sudo apt-get install -y build-essential git libncurses-dev clang flex bison lld libelf-dev bindgen-cli
 
-# Install QEMU
-$ sudo apt-get install -y qemu-system
+# Install QEMU for x86
+$ sudo apt-get install -y qemu-system-x86_64 
+
+# Install QEMU for ARM64
+$ $ sudo apt-get install -y qemu-system-aarch64
 ```
 
 </TabItem>
 
-<TabItem value="fedora" label="Fedora">
+<TabItem value="fedora" label="Fedora 43">
 
 ```shell
 # Update the package library
 $ dnf update
 
 # Kernel Compilation
-$ dnf install -y make clang ncurses-devel flex bison lld llvm elfutils-libelf-devel glibc-static
+$ dnf install -y make clang ncurses-devel flex bison lld llvm elfutils-libelf-devel glibc-static bindgen-cli
 
 # BusyBox Compilation
 $ dnf install -y glibc-static
 
-# Install QEMU
-$ dnf install -y qemu-system-x86_64
+# Install QEMU x86
+$ dnf install -y qemu-system-x86_64 
+
+#Install QEMU for ARM64
+$ dnf install -y qemu-system-aarch64
 ```
 
 </TabItem>
@@ -119,6 +133,11 @@ $ make LLVM=1 menuconfig
 
 Make sure the following components are selected:
 
+:::warning
+Please make sure you select all the module components (displayed with \< \>) using **\<*\>** and not \<M\>. We want all the modules
+compiled into the kernel and as not seperate modules.
+:::
+
 ```
 - 64bit Kernel (no Rust otherwise)
 - General setup 
@@ -141,9 +160,6 @@ Make sure the following components are selected:
       - Automount devtmpfs at /dev, after kernel mounted the rootfs
   - Character devices
     - Enable tty
-    - Serial drivers
-      - 8250/16550 and compatible serial support
-      - Console on 8250/16550 and compatible serial port
 - File systems 
   - Pseudo filesystems
     - /proc file system support
@@ -151,6 +167,38 @@ Make sure the following components are selected:
     - sysfs file system support
     - Userspace-driven configuration filesystem
 ```
+
+Depending on the platform that we have, we have to select the propoer serial port.
+
+<Tabs>
+
+<TabItem value="x86" label="x86_64">
+
+```
+- Device Drivers
+  - Character devices
+    - Serial drivers
+      - 8250/16550 and compatible serial support
+      - Console on 8250/16550 and compatible serial port
+```
+
+</TabItem>
+
+<TabItem value="arm64" label="ARM64">
+
+```
+- Device Drivers
+  - Character devices
+    - Serial drivers
+      - ARM AMBA PL010 serial port support
+        - Support for console on AMBA serial port
+      - ARM AMBA PL011 serial port support
+        - Support for console on AMBA serial port
+```
+
+</TabItem>
+
+</Tabs>
 
 ### Build the kernel
 
@@ -174,8 +222,14 @@ We will use QEMU to run a machine and boot our kernel. Instead of using a bootlo
 provides a minimal bootloader that can load a `multiboot v1` compatible kernel that is 
 supplied using the `-kernel` argument. The Linux kernel is compatible. 
 
+<Tabs>
+
+<TabItem value="x86" label="x86_64">
+
 ```bash
-$ qemu-system-x86_64 -kernel arch/x86_64/boot/bzImage -nographic -append "earlyprintk=serial,ttyS0 console=ttyS0 debug"
+$ qemu-system-x86_64 -kernel arch/x86_64/boot/bzImage \ 
+                      -nographic \
+                      -append "earlyprintk=serial,ttyS0 console=ttyS0 debug"
 ```
 
 Running QEMU should print an output similar to:
@@ -308,6 +362,26 @@ Kernel Offset: disabled
 ---[ end Kernel panic - not syncing: VFS: Unable to mount root fs on "" or unknown-block(0,0) ]---
 ```
 
+</TabItem>
+
+<TabItem value="arm64" label="ARM64">
+
+```bash
+$ qemu-system-aarch64 -machine virt \
+                      -cpu cortex-a53 \
+                      -smp 1 \
+                      -m 512M \
+                      -nographic \
+                      -kernel arch/arm64/boot/Image \
+                      -append "earlyprintk=serial,ttyAMA0 console=ttyAMA0 debug"
+```
+
+We use a virtual Cortex-A53 with one core and 512 MB of RAM.
+
+</TabItem>
+
+</Tabs>
+
 **The kernel panicked!** 
 
 :::tip
@@ -351,10 +425,10 @@ $ find . -print0 | cpio --null -ov --format=newc | gzip -9 > ../initramfs.cpio.g
 
 ### Boot the kernel with the RAM disk
 
-We have to add the `--initrd` argument to QEMU.
+We have to add the `-initrd` argument to QEMU.
 
 ```bash
-$ qemu-system-x86_64 -kernel arch/x86_64/boot/bzImage -nographic -append "earlyprintk=serial,ttyS0 console=ttyS0 debug" --initrd initramfs.cpio.gz
+$ qemu-system-x86_64 -kernel arch/x86_64/boot/bzImage -nographic -append "earlyprintk=serial,ttyS0 console=ttyS0 debug" -initrd initramfs.cpio.gz
 ```
 
 **The kernel boots, but it seems to show use the same panic!**
@@ -572,6 +646,27 @@ EOF
 	fi
 }
 
+```
+:::
+
+:::warning
+BusyBox has a bug on ARM64, we have to patch the `libbb/hasn_md5_sha.c` file atg line 1316
+
+```diff
+index 57a801459..75a61c32c 100644
+--- a/libbb/hash_md5_sha.c
++++ b/libbb/hash_md5_sha.c
+@@ -1313,7 +1313,9 @@ unsigned FAST_FUNC sha1_end(sha1_ctx_t *ctx, void *resbuf)
+ 	hash_size = 8;
+ 	if (ctx->process_block == sha1_process_block64
+ #if ENABLE_SHA1_HWACCEL
++# if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
+ 	 || ctx->process_block == sha1_process_block64_shaNI
++# endif
+ #endif
+ 	) {
+ 		hash_size = 5;
+-- 
 ```
 :::
 
