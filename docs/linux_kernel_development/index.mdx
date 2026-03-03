@@ -82,8 +82,8 @@ We will use these variables througout the workshop.
 | Variable | Description |
 |-|-|
 | `$KDIR` | The kernel's source directory |
-| `$MODULE` | The name of the kenrel module's object name (ex: `empty.ko`) |
-| `$INIT_RAM_FS` | Foldetr where we stotre the development file system |
+| `$MODULE` | The name of the kernel module's object name (ex: `empty.ko`) |
+| `$INIT_RAM_FS` | Folder where we store the development file system |
 
 ## Setup the Kernel
 
@@ -92,7 +92,7 @@ folder.
 
 :::info
 We will call the folder in which you have unarchived the kernel `$KDIR`. We suggest setting
-and environment variable with the path to this folder.
+an environment variable with the path to this folder.
 
 ```shell
 $ export KDIR=/home/user/linux-6.18-rc5
@@ -116,8 +116,8 @@ $ make LLVM=1 mrproper
 
 ### Configure the Kernel
 
-The Linux kernel is very large, having thousends of components and drivers. 
-We want a minimal configartion that allows use to write Rust drivers.
+The Linux kernel is very large, having thousands of components and drivers. 
+We want a minimal configuration that allows us to write Rust drivers.
 
 To start from a minimal configuration, we use the `allnoconfig` setup. This will enable
 only the minimal components needed to boot.
@@ -174,7 +174,7 @@ compiled into the kernel and as not seperate modules.
     - Userspace-driven configuration filesystem
 ```
 
-Depending on the platform that we have, we have to select the propoer serial port.
+Depending on the platform that we have, we have to select the proper serial port.
 
 <Tabs>
 
@@ -211,7 +211,7 @@ Depending on the platform that we have, we have to select the propoer serial por
 Now let's build the kernel.
 
 :::tip
-As this wil take a longer time, we want to make sure we use all the avilable cores.
+As this wil take a longer time, we want to make sure we use all the available cores.
 
 Replace the `n` in `-jn` with the number of cores that your laptop has.
 :::
@@ -805,7 +805,7 @@ Hello, world!
 
 ## Setup BusyBox
 
-We have created our own `init`, but the syuste is useless when using it. We need to be able to 
+We have created our own `init`, but the system is useless when using it. We need to be able to
 run a shell and execute shell commands. A tool that provides and `init` and the shell commands
 is [BusyBox](https://busybox.net/).
 
